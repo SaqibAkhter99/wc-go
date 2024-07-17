@@ -6,13 +6,18 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 )
 
 func main() {
-	fileName := flag.String("file", "", "Path to the file to read")
+	fileName := flag.String("c", "", "Path to the file to read")
+	fmt.Println(*fileName)
 	flag.Parse()
-	absName = fileName
-	fmt.Println(absName)
+
+	// Extracting name of file
+	fName := strings.Split(*fileName, "/")
+	AbsfileName := fName[len(fName)-1]
+
 	if *fileName == "" {
 		fmt.Println("Please provide a file name using the -file flag.")
 		os.Exit(1)
@@ -21,14 +26,18 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to open file: %s", err)
 	}
+	byteCount := count_bytes(file)
 	defer file.Close()
+	fmt.Printf("The file %s contains %d bytes.\n", AbsfileName, byteCount)
 
-	// Create a buffered reader
+}
+
+// Create a buffered reader
+
+func count_bytes(file *os.File) int {
 	reader := bufio.NewReader(file)
-	fmt.Println(reader.ReadLine())
 	// Initialize byte count
 	byteCount := 0
-
 	// Read the file byte by byte
 	for {
 		_, err := reader.ReadByte()
@@ -37,7 +46,8 @@ func main() {
 		}
 		byteCount++
 	}
+	return byteCount
 
 	// Print the byte count
-	fmt.Printf("The file %s contains %d bytes.\n", *fileName, byteCount)
+
 }
