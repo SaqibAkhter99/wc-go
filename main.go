@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -11,106 +12,74 @@ import (
 )
 
 func main() {
-	funcFlag := os.Args[1]
-	if len(os.Args) < 3 {
-		file, err := os.Open(os.Args[1])
-		fName := strings.Split(os.Args[1], "/")
-		AbsfileName := fName[len(fName)-1]
-		if err != nil {
-			log.Fatalf("Failed to open file: %s", err)
-			os.Exit(1)
-		} else {
-			lineCount := count_lines(file)
-			defer file.Close()
-			file1, _ := os.Open(os.Args[1])
-			wordCount := count_words(file1)
-			defer file.Close()
-			file, _ := os.Open(os.Args[1])
-			byteCount := count_bytes(file)
-			defer file.Close()
-			fmt.Printf("%d %d %d %s \n", lineCount, wordCount, byteCount, AbsfileName)
+	// Define flags
+	byteFlag := flag.Bool("c", false, "Count bytes")
+	lineFlag := flag.Bool("l", false, "Count lines")
+	wordFlag := flag.Bool("w", false, "Count words")
+	charFlag := flag.Bool("m", false, "Count characters")
+	flag.Parse()
 
-		}
-	} else {
-		resFlag := string(funcFlag[1])
-		fName := strings.Split(os.Args[2], "/")
-		AbsfileName := fName[len(fName)-1]
-		file, err := os.Open(os.Args[2])
-		if err != nil {
-			log.Fatalf("Failed to open file: %s", err)
-		}
-		if resFlag == "c" {
-			byteCount := count_bytes(file)
-			defer file.Close()
-			fmt.Printf("%d %s \n", byteCount, AbsfileName)
-		} else if resFlag == "l" {
-			lineCount := count_lines(file)
-			defer file.Close()
-			fmt.Printf("%d %s \n", lineCount, AbsfileName)
-		} else if resFlag == "w" {
-			wordCount := count_words(file)
-			defer file.Close()
-			fmt.Printf("%d %s \n", wordCount, AbsfileName)
-		} else if resFlag == "m" {
-			charCount := count_chars(file)
-			defer file.Close()
-			fmt.Printf("%d %s \n", charCount, AbsfileName)
+	// Check for file argument
+	if flag.NArg() < 1 {
+		log.Fatalf("Usage: %s [-c|-l|-w|-m] <filename>", os.Args[0])
+	}
 
-		} else {
-			fmt.Println("invalid flag")
-		}
+	// Get the file name
+	fileName := flag.Arg(0)
+
+	// Open the file
+	file, err := os.Open(fileName)
+	if err != nil {
+		log.Fatalf("Failed to open file: %s", err)
+	}
+	defer file.Close()
+
+	// Read the file content
+	content, err := io.ReadAll(file)
+	if err != nil {
+		log.Fatalf("Failed to read file: %s", err)
+	}
+
+	// Count and print results based on flags
+	if *byteFlag {
+		fmt.Printf("%d %s\n", len(content), fileName)
+	}
+	if *lineFlag {
+		lineCount := countLines(content)
+		fmt.Printf("%d %s\n", lineCount, fileName)
+	}
+	if *wordFlag {
+		wordCount := countWords(content)
+		fmt.Printf("%d %s\n", wordCount, fileName)
+	}
+	if *charFlag {
+		charCount := utf8.RuneCount(content)
+		fmt.Printf("%d %s\n", charCount, fileName)
+	}
+
+	// If no specific flag is provided, default to all counts
+	if !*byteFlag && !*lineFlag && !*wordFlag && !*charFlag {
+		lineCount := countLines(content)
+		wordCount := countWords(content)
+		charCount := utf8.RuneCount(content)
+		fmt.Printf("%d %d %d %s\n", lineCount, wordCount, charCount, fileName)
 	}
 }
 
-func count_bytes(file *os.File) int {
-	reader := bufio.NewReader(file)
-	// Initialize byte count
-	byteCount := 0
-	// Read the file byte by byte
-	for {
-		_, err := reader.ReadByte()
-		if err != nil {
-			break
-		}
-		byteCount++
-	}
-	return byteCount
-}
-
-func count_lines(file *os.File) int {
+func countLines(content []byte) int {
 	lineCount := 0
-	reader := bufio.NewReader(file)
-	// Read the file line by line
-	for {
-		_, _, err := reader.ReadLine()
-		if err != nil {
-			break
-		}
+	scanner := bufio.NewScanner(strings.NewReader(string(content)))
+	for scanner.Scan() {
 		lineCount++
 	}
 	return lineCount
 }
 
-func count_words(file *os.File) int {
+func countWords(content []byte) int {
 	wordCount := 0
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(strings.NewReader(string(content)))
 	for scanner.Scan() {
 		wordCount += len(strings.Fields(scanner.Text()))
 	}
-
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
 	return wordCount
-}
-
-func count_chars(file *os.File) int {
-	content, err := io.ReadAll(file)
-	if err != nil {
-		log.Fatalf("failed to read file: %v", err)
-	}
-
-	// Count the characters
-	charCount := utf8.RuneCount(content)
-	return charCount
 }
